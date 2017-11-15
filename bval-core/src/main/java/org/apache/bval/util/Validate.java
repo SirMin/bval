@@ -16,9 +16,10 @@
  */
 package org.apache.bval.util;
 
+import java.util.Objects;
+
 /**
- * Some used Validate from commons.
- *
+ * Some used validations from commons.
  */
 public final class Validate {
     private Validate() {
@@ -29,10 +30,7 @@ public final class Validate {
     }
 
     public static <T> T notNull(final T object, final String message, final Object... values) {
-        if (object == null) {
-            throw new NullPointerException(String.format(message, values));
-        }
-        return object;
+        return Objects.requireNonNull(object, () -> String.format(message, values));
     }
 
     public static void isTrue(final boolean expression, final String message, final Object... values) {
@@ -41,4 +39,20 @@ public final class Validate {
         }
     }
 
+    public static <T> T[] noNullElements(final T[] array, final String message, final Object... values) {
+        Validate.notNull(array);
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] == null) {
+                final Object[] values2 = ObjectUtils.arrayAdd(values, Integer.valueOf(i));
+                throw new IllegalArgumentException(String.format(message, values2));
+            }
+        }
+        return array;
+    }
+
+    public static void validState(final boolean expression, final String message, final Object... values) {
+        if (expression == false) {
+            throw new IllegalStateException(String.format(message, values));
+        }
+    }
 }
