@@ -43,10 +43,10 @@ public class MaxValidatorForNumber implements ConstraintValidator<Max, Number> {
             return true;
         }
         if (value instanceof BigDecimal) {
-            return ((BigDecimal) value).compareTo(BigDecimal.valueOf(max)) != 1;
+            return ((BigDecimal) value).compareTo(BigDecimal.valueOf(max)) < 1;
         }
         if (value instanceof BigInteger) {
-            return ((BigInteger) value).compareTo(BigInteger.valueOf(max)) != 1;
+            return ((BigInteger) value).compareTo(BigInteger.valueOf(max)) < 1;
         }
         return value.longValue() <= max;
     }

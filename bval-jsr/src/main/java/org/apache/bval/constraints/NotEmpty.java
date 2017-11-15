@@ -18,17 +18,21 @@
  */
 package org.apache.bval.constraints;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.CONSTRUCTOR;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.ElementType.TYPE_USE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
-import static java.lang.annotation.ElementType.FIELD;
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.PARAMETER;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import javax.validation.Constraint;
+import javax.validation.OverridesAttribute;
+import javax.validation.Payload;
 
 /**
  * <pre>
@@ -39,12 +43,17 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Documented
 @Constraint(validatedBy = { NotEmptyValidatorForCollection.class, NotEmptyValidatorForMap.class,
     NotEmptyValidatorForString.class, NotEmptyValidator.class })
-@Target({ METHOD, FIELD, ANNOTATION_TYPE, PARAMETER })
+@Target({ METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE })
 @Retention(RUNTIME)
+@javax.validation.constraints.NotEmpty
+@Deprecated
 public @interface NotEmpty {
+    @OverridesAttribute(constraint = javax.validation.constraints.NotEmpty.class, name = "groups")
     Class<?>[] groups() default {};
 
+    @OverridesAttribute(constraint = javax.validation.constraints.NotEmpty.class, name = "message")
     String message() default "{org.apache.bval.constraints.NotEmpty.message}";
 
+    @OverridesAttribute(constraint = javax.validation.constraints.NotEmpty.class, name = "payload")
     Class<? extends Payload>[] payload() default {};
 }
