@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Implementation is thread-safe.
  */
 public class GroupsComputer {
-    public static final Class<?>[] DEFAULT_GROUP = new Class<?>[] { Default.class };
+    public static final Class<?>[] DEFAULT_GROUP = { Default.class };
 
     /** The default group array used in case any of the validate methods is called without a group. */
     private static final Groups DEFAULT_GROUPS;
@@ -46,7 +46,7 @@ public class GroupsComputer {
     }
 
     /** caching resolved groups in a thread-safe map. */
-    private final Map<Class<?>, List<Group>> resolvedSequences = new ConcurrentHashMap<Class<?>, List<Group>>();
+    private final Map<Class<?>, List<Group>> resolvedSequences = new ConcurrentHashMap<>();
 
     /**
      * Compute groups from an array of group classes.
@@ -72,7 +72,7 @@ public class GroupsComputer {
      * @return {@link Groups}
      */
     protected Groups computeGroups(Collection<Class<?>> groups) {
-        if (groups == null || groups.size() == 0) {
+        if (groups == null || groups.isEmpty()) {
             throw new IllegalArgumentException("At least one group has to be specified.");
         }
 
@@ -80,9 +80,8 @@ public class GroupsComputer {
             if (clazz == null) {
                 throw new IllegalArgumentException("At least one group has to be specified.");
             }
-
             if (!clazz.isInterface()) {
-                throw new ValidationException("A group has to be an interface. " + clazz.getName() + " is not.");
+                throw new ValidationException("A group must be an interface. " + clazz.getName() + " is not.");
             }
         }
 
@@ -114,7 +113,7 @@ public class GroupsComputer {
         if (resolvedSequences.containsKey(clazz)) {
             sequence = resolvedSequences.get(clazz);
         } else {
-            sequence = resolveSequence(clazz, anno, new HashSet<Class<?>>());
+            sequence = resolveSequence(clazz, anno, new HashSet<>());
         }
         chain.insertSequence(sequence);
     }
@@ -123,10 +122,9 @@ public class GroupsComputer {
         Set<Class<?>> processedSequences) {
         if (processedSequences.contains(group)) {
             throw new GroupDefinitionException("Cyclic dependency in groups definition");
-        } else {
-            processedSequences.add(group);
         }
-        List<Group> resolvedGroupSequence = new LinkedList<Group>();
+        processedSequences.add(group);
+        List<Group> resolvedGroupSequence = new LinkedList<>();
         Class<?>[] sequenceArray = sequenceAnnotation.value();
         for (Class<?> clazz : sequenceArray) {
             GroupSequence anno = clazz.getAnnotation(GroupSequence.class);

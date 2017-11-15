@@ -29,12 +29,12 @@ import java.util.List;
  * @author Roman Stumm
  */
 public class Groups {
-    /** The list of single groups. */
-    final List<Group> groups = new LinkedList<Group>();
-
     /** The list of sequences. */
-    final List<List<Group>> sequences = new LinkedList<List<Group>>();
+    private final List<List<Group>> sequences = new LinkedList<>();
 
+    /** The list of single groups. */
+    final List<Group> groups = new LinkedList<>();
+    
     /**
      * Get the Groups.
      * @return {@link List} of {@link Group}.

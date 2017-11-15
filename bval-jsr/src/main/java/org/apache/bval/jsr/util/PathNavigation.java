@@ -36,7 +36,7 @@ public class PathNavigation {
     /**
      * Path traversal callback function interface.
      */
-    public interface Callback<T> {
+    interface Callback<T> {
         /**
          * Handle a .-delimited property.
          * 
@@ -67,13 +67,13 @@ public class PathNavigation {
     /**
      * Callback "procedure" that always returns null.
      */
-    public static abstract class CallbackProcedure implements Callback<Object> {
+    public static abstract class CallbackProcedure implements Callback<Void> {
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public final Object result() {
+        public final Void result() {
             complete();
             return null;
         }
@@ -275,7 +275,7 @@ public class PathNavigation {
     /**
      * ParsePosition/Callback
      */
-    private static class PathPosition extends ParsePosition implements Callback<Object> {
+    private static class PathPosition extends ParsePosition implements Callback<Void> {
         final Callback<?> delegate;
 
         /**
@@ -336,7 +336,7 @@ public class PathNavigation {
          * {@inheritDoc}
          */
         @Override
-        public Object result() {
+        public Void result() {
             return null;
         }
 
