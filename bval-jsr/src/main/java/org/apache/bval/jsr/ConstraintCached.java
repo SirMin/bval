@@ -18,18 +18,76 @@
  */
 package org.apache.bval.jsr;
 
-import javax.validation.ConstraintValidator;
 import java.lang.annotation.Annotation;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
+
+import javax.validation.ConstraintValidator;
+import javax.validation.constraintvalidation.SupportedValidationTarget;
+import javax.validation.constraintvalidation.ValidationTarget;
+
+import org.apache.bval.jsr.util.ToUnmodifiable;
+import org.apache.bval.util.ObjectUtils;
+import org.apache.bval.util.Validate;
 
 /**
  * Description: hold the relationship annotation->validatedBy[] ConstraintValidator classes that are already parsed in a
  * cache.<br/>
  */
 public class ConstraintCached {
-    private final Map<Class<? extends Annotation>, Class<? extends ConstraintValidator<?, ?>>[]> classes =
-        new HashMap<Class<? extends Annotation>, Class<? extends ConstraintValidator<?, ?>>[]>();
+
+    /**
+     * Describes a {@link ConstraintValidator} implementation type.
+     * 
+     * @since 2.0
+     */
+    public static final class ConstraintValidatorInfo<T extends Annotation> {
+        private static final Set<ValidationTarget> DEFAULT_VALIDATION_TARGETS =
+            Collections.singleton(ValidationTarget.ANNOTATED_ELEMENT);
+
+        private final Class<? extends ConstraintValidator<T, ?>> type;
+        private Set<ValidationTarget> supportedTargets;
+
+        ConstraintValidatorInfo(Class<? extends ConstraintValidator<T, ?>> type) {
+            super();
+            this.type = Validate.notNull(type);
+            final SupportedValidationTarget svt = type.getAnnotation(SupportedValidationTarget.class);
+
+            supportedTargets = svt == null ? DEFAULT_VALIDATION_TARGETS
+                : Collections.unmodifiableSet(EnumSet.copyOf(Arrays.asList(svt.value())));
+        }
+
+        public Class<? extends ConstraintValidator<T, ?>> getType() {
+            return type;
+        }
+
+        public Set<ValidationTarget> getSupportedTargets() {
+            return supportedTargets;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj == this
+                || obj instanceof ConstraintValidatorInfo<?> && ((ConstraintValidatorInfo<?>) obj).type.equals(type);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(type);
+        }
+    }
+
+    private final Map<Class<? extends Annotation>, Set<ConstraintValidatorInfo<?>>> constraintValidatorInfo =
+        new HashMap<>();
 
     /**
      * Record the set of validator classes for a given constraint annotation.
@@ -39,7 +97,12 @@ public class ConstraintCached {
      */
     public <A extends Annotation> void putConstraintValidator(Class<A> annotationClass,
         Class<? extends ConstraintValidator<A, ?>>[] definitionClasses) {
-        classes.put(annotationClass, definitionClasses);
+        if (ObjectUtils.isEmpty(definitionClasses)) {
+            return;
+        }
+        Validate.notNull(annotationClass, "annotationClass");
+        Stream.of(definitionClasses).map(t -> new ConstraintValidatorInfo<>(t))
+            .forEach(constraintValidatorInfo.computeIfAbsent(annotationClass, k -> new HashSet<>())::add);
     }
 
     /**
@@ -50,20 +113,39 @@ public class ConstraintCached {
      * @return boolean
      */
     public boolean containsConstraintValidator(Class<? extends Annotation> annotationClass) {
-        return classes.containsKey(annotationClass);
+        return constraintValidatorInfo.containsKey(annotationClass);
     }
 
     /**
      * Get the cached validator classes for the requested constraint annotation.
      * 
-     * @param annotationClass
+     * @param constraintType
      *            to look up
      * @return array of {@link ConstraintValidator} implementation types
      */
     @SuppressWarnings("unchecked")
+    @Deprecated
     public <A extends Annotation> Class<? extends ConstraintValidator<A, ?>>[] getConstraintValidators(
-        Class<A> annotationClass) {
-        return (Class<? extends ConstraintValidator<A, ?>>[]) classes.get(annotationClass);
+        Class<A> constraintType) {
+        final Set<ConstraintValidatorInfo<A>> infos = infos(constraintType);
+        return infos == null ? new Class[0]
+            : infos.stream().map(ConstraintValidatorInfo::getType).toArray(Class[]::new);
     }
 
+    public <A extends Annotation> List<Class<? extends ConstraintValidator<A, ?>>> getConstraintValidatorClasses(
+        Class<A> constraintType) {
+        final Set<ConstraintValidatorInfo<A>> infos = infos(constraintType);
+        return infos == null ? Collections.emptyList()
+            : infos.stream().map(ConstraintValidatorInfo::getType).collect(ToUnmodifiable.list());
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private <A extends Annotation> Set<ConstraintValidatorInfo<A>> infos(Class<A> constraintType) {
+        return (Set) constraintValidatorInfo.get(constraintType);
+    }
+
+    public <A extends Annotation> Optional<Set<ConstraintValidatorInfo<A>>> getConstraintValidatorInfo(
+        Class<A> constraintType) {
+        return Optional.ofNullable(infos(constraintType)).map(Collections::unmodifiableSet);
+    }
 }

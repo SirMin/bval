@@ -134,20 +134,16 @@ public enum ConstraintAnnotationAttributes {
     public <C extends Annotation> Worker<C> analyze(final Class<C> clazz) {
         if (clazz.getName().startsWith("javax.validation.constraint.")) { // cache only APIs classes to avoid memory leaks
             @SuppressWarnings("unchecked")
-            Worker<C> w = Worker.class.cast(WORKER_CACHE.get(clazz));
-            if (w == null) {
-                w = new Worker<C>(clazz);
-                WORKER_CACHE.putIfAbsent(clazz, w);
-                return w;
-            }
+            final Worker<C> w = (Worker<C>) WORKER_CACHE.computeIfAbsent(clazz, Worker::new);
+            return w;
         }
         return new Worker<C>(clazz);
     }
 
     // this is static but related to Worker
-    private static final ConcurrentMap<Class<?>, Worker<?>> WORKER_CACHE = new ConcurrentHashMap<Class<?>, Worker<?>>();
+    private static final ConcurrentMap<Class<?>, Worker<?>> WORKER_CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentMap<Class<?>, ConcurrentMap<String, Method>> METHOD_BY_NAME_AND_CLASS =
-        new ConcurrentHashMap<Class<?>, ConcurrentMap<String, Method>>();
+        new ConcurrentHashMap<>();
     private static final Method NULL_METHOD;
     static {
         try {
@@ -171,14 +167,8 @@ public enum ConstraintAnnotationAttributes {
         }
 
         private Method findMethod(final Class<C> constraintType, final String attributeName) {
-            ConcurrentMap<String, Method> cache = METHOD_BY_NAME_AND_CLASS.get(constraintType);
-            if (cache == null) {
-                cache = new ConcurrentHashMap<String, Method>();
-                final ConcurrentMap<String, Method> old = METHOD_BY_NAME_AND_CLASS.putIfAbsent(constraintType, cache);
-                if (old != null) {
-                    cache = old;
-                }
-            }
+            ConcurrentMap<String, Method> cache =
+                METHOD_BY_NAME_AND_CLASS.computeIfAbsent(constraintType, t -> new ConcurrentHashMap<>());
 
             final Method found = cache.get(attributeName);
             if (found != null) {
@@ -189,15 +179,19 @@ public enum ConstraintAnnotationAttributes {
                 cache.putIfAbsent(attributeName, NULL_METHOD);
                 return null;
             }
-            final Method oldMtd = cache.putIfAbsent(attributeName, m);
-            if (oldMtd != null) {
-                return oldMtd;
-            }
-            return m;
+            return cache.computeIfAbsent(attributeName, s -> m);
         }
 
         public boolean isValid() {
-            return method != null && method != NULL_METHOD;
+            return method != null && method != NULL_METHOD && TypeUtils.isAssignable(method.getReturnType(), type);
+        }
+
+        /**
+         * @since 2.0
+         * @return {@link Type}
+         */
+        public Type getSpecificType() {
+            return isValid() ? method.getGenericReturnType() : type;
         }
 
         public <T> T read(final Annotation constraint) {

@@ -80,28 +80,20 @@ public class ConstraintDefaults {
     private Map<String, Class<? extends ConstraintValidator<?, ?>>[]> loadDefaultConstraints(String resource) {
         final Properties constraintProperties = new Properties();
         final ClassLoader classloader = getClassLoader();
-        final InputStream stream = classloader.getResourceAsStream(resource);
-        if (stream == null) {
-            log.log(Level.WARNING, String.format("Cannot find %s", resource));
-        } else {
-            try {
+        try (final InputStream stream = classloader.getResourceAsStream(resource)) {
+            if (stream == null) {
+                log.log(Level.WARNING, String.format("Cannot find %s", resource));
+            } else {
                 constraintProperties.load(stream);
-            } catch (IOException e) {
-                log.log(Level.SEVERE, String.format("Cannot load %s", resource), e);
-            } finally {
-                try {
-                    stream.close();
-                } catch (final IOException e) {
-                    // no-op
-                }
             }
+        } catch (IOException e) {
+            log.log(Level.SEVERE, String.format("Cannot load %s", resource), e);
         }
 
-        final Map<String, Class<? extends ConstraintValidator<?, ?>>[]> loadedConstraints =
-            new HashMap<String, Class<? extends ConstraintValidator<?, ?>>[]>();
+        final Map<String, Class<? extends ConstraintValidator<?, ?>>[]> loadedConstraints = new HashMap<>();
 
         for (final Map.Entry<Object, Object> entry : constraintProperties.entrySet()) {
-            final List<Class<?>> classes = new LinkedList<Class<?>>();
+            final List<Class<?>> classes = new LinkedList<>();
             for (String className : StringUtils.split((String) entry.getValue(), ',')) {
                 try {
                     classes.add(Reflection.toClass(className.trim(), classloader));
